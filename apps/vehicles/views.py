@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Vehicle
+from apps.shifts.models import Shift
 from .serializers import VehicleSerializer
 from rest_framework.permissions import IsAuthenticated
 
@@ -10,23 +11,16 @@ class VehicleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        # Código existente para crear un vehículo
+        # Obtener el turno activo
+        try:
+            turno_actual = Shift.objects.get(is_active=True)
+        except Shift.DoesNotExist:
+            return Response({"error": "No hay un turno abierto actualmente."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Crear el vehículo y asociarlo al turno activo
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(registered_by=request.user)
+        vehicle = serializer.save(registered_by=request.user)
+
+        turno_actual.vehicles.add(vehicle)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def update(self, request, *args, **kwargs):
-        # Código existente para actualizar un vehículo
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
-
-    def destroy(self, request, *args, **kwargs):
-        """Elimina lógicamente un vehículo."""
-        instance = self.get_object()
-        instance.soft_delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
