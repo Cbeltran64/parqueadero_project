@@ -1,40 +1,37 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from .models import Ticket
 from .serializers import TicketSerializer
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
+from apps.tariffs.models import Tariff
+
 
 class TicketViewSet(viewsets.ModelViewSet):
-    queryset = Ticket.objects.filter(status=1)  # Solo mostrar tiquetes activos
+    queryset = Ticket.objects.filter(status=1)
     serializer_class = TicketSerializer
     permission_classes = [IsAuthenticated]
 
-    def create(self, request, *args, **kwargs):
-        # Código existente para crear un tiquete
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(generated_by=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    @action(detail=False, methods=['post'])
+    def entrada(self, request):
+        vehicle_plate = request.data.get('vehicle_plate')
+        user = request.user
+        ticket = Ticket.objects.create(vehicle_plate=vehicle_plate, generated_by=user)
+        return Response(ticket.generate_entry_ticket(), status=status.HTTP_201_CREATED)
 
-    def update(self, request, *args, **kwargs):
-        # Código existente para actualizar un tiquete
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+    @action(detail=False, methods=['post'])
+    def salida(self, request):
+        ticket_number = request.data.get('ticket_number')
+        tarifa_id = request.data.get('tarifa_id')
+        valor_otros = request.data.get('valor_otros', 0)
 
-    def destroy(self, request, *args, **kwargs):
-        """Elimina lógicamente el tiquete."""
-        instance = self.get_object()
-        instance.soft_delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(detail=True, methods=['get'])
-    def print(self, request, pk=None):
-        """Obtener información detallada del tiquete para impresión."""
-        ticket = self.get_object()
-        serializer = TicketSerializer(ticket)
-        return Response(serializer.data)
+        try:
+            ticket = Ticket.objects.get(ticket_number=ticket_number)
+            ticket.exit_time = now()
+            tarifa = Tariff.objects.get(id=tarifa_id)
+            ticket.save()
+            return Response(ticket.generate_exit_ticket(tarifa, valor_otros), status=status.HTTP_200_OK)
+        except Ticket.DoesNotExist:
+            return Response({"error": "Ticket no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        except Tariff.DoesNotExist:
+            return Response({"error": "Tarifa no encontrada"}, status=status.HTTP_404_NOT_FOUND)

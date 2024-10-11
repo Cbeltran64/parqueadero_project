@@ -33,6 +33,8 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.billing',
     'apps.shifts',
+    'apps.menu',
+    'apps.parkinginfo',
 ]
 
 MIDDLEWARE = [
@@ -70,7 +72,7 @@ WSGI_APPLICATION = 'parqueadero_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'parqueadero_db',
+        'NAME': 'parkgenius_db',
         'USER': 'postgres',
         'PASSWORD': '123',
         'HOST': 'localhost',
