@@ -12,6 +12,12 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            if not self.request.user.sistema:
+                self.permission_denied(self.request, message="No tiene permiso para realizar esta acción.")
+        return super().get_permissions()
+
     @action(detail=False, methods=['post'])
     def entrada(self, request):
         vehicle_plate = request.data.get('vehicle_plate')

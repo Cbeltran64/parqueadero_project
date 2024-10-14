@@ -1,32 +1,26 @@
-# parqueadero_project/serializers.py
-
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import CustomUser
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'role', 'is_active']
+        fields = [
+            'id', 'username', 'email', 'is_staff', 'is_active',
+            'gestion_usuarios', 'configuracion_sistema', 'generacion_reportes', 'sistema'
+        ]
 
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['username', 'password', 'email', 'role']
+        fields = [
+            'username', 'password', 'email', 'is_staff', 'is_active',
+            'gestion_usuarios', 'configuracion_sistema', 'generacion_reportes', 'sistema'
+        ]
+        extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        user = CustomUser.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            role=validated_data['role'],
-            password=validated_data['password']
-        )
+        password = validated_data.pop('password')
+        user = CustomUser(**validated_data)
+        user.set_password(password)
+        user.save()
         return user
-
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        # Agregar campos personalizados al token
-        token['role'] = user.role  # Asegúrate de que 'role' es un campo en tu modelo de usuario
-        return token

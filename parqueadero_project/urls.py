@@ -1,18 +1,17 @@
-from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView
-from .views import CustomTokenObtainPairView
-from rest_framework import routers
+from .views import CustomTokenObtainPairView, LogoutView, UserMenuPermissionsView
+from rest_framework.routers import DefaultRouter
 from apps.users.views import UserViewSet
-
-router = routers.DefaultRouter()
+from django.contrib import admin
+router = DefaultRouter()
 router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Incluimos las rutas de nuestras aplicaciones
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/logout/', LogoutView.as_view(), name='logout'),
+    path('api/users/menu-permissions/', UserMenuPermissionsView.as_view(), name='user_menu_permissions'),
     path('api/', include(router.urls)),
-    # Rutas de autenticación
-    path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/', include('apps.parkinginfo.urls')),
+    path('api/', include('apps.tariffs.urls')),
 ]

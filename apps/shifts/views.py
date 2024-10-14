@@ -11,31 +11,12 @@ class ShiftViewSet(viewsets.ModelViewSet):
     serializer_class = ShiftSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        """Crear un nuevo turno (apertura de caja)"""
-        serializer.save(opened_by=self.request.user)
-
-    def close_shift(self, request, pk=None):
-        """Cerrar el turno actual, calculando el total de ingresos"""
-        try:
-            shift = self.get_object()
-            if not shift.is_active:
-                return Response({"error": "El turno ya está cerrado."}, status=status.HTTP_400_BAD_REQUEST)
-
-            total_income = request.data.get('total_income')
-            if total_income is None:
-                return Response({"error": "Debe proporcionar el total de ingresos."}, status=status.HTTP_400_BAD_REQUEST)
-
-            shift.close_shift(total_income=total_income, closed_by=request.user)
-
-            # Generar reporte solo con el total de ingresos
-            report = {
-                "total_income": shift.total_income,
-            }
-
-            return Response({"status": "Turno cerrado correctamente.", "report": report}, status=status.HTTP_200_OK)
-        except Shift.DoesNotExist:
-            return Response({"error": "Turno no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+    def get_queryset(self):
+        user = self.request.user
+        if user.gestion_usuarios or user.configuracion_sistema:
+            return Shift.objects.all()
+        else:
+            return Shift.objects.none()
 
 class VehicleCountsInShiftView(APIView):
     def get(self, request):
