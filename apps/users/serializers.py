@@ -9,6 +9,12 @@ class UserSerializer(serializers.ModelSerializer):
             'gestion_usuarios', 'configuracion_sistema', 'generacion_reportes', 'sistema'
         ]
 
+        def update(self, instance, validated_data):
+            password = validated_data.pop('password', None)
+            if password:
+                instance.set_password(password)
+            return super().update(instance, validated_data)
+
 class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
